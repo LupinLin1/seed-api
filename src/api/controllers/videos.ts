@@ -226,6 +226,8 @@ async function fetchOriginVideoUrl(
   itemId: string,
   refreshToken: string
 ): Promise<string | null> {
+  const startTime = Date.now();
+
   try {
     logger.info(`尝试获取原始视频URL, itemId: ${itemId}`);
 
@@ -240,17 +242,110 @@ async function fetchOriginVideoUrl(
       }
     });
 
+    const elapsed = Date.now() - startTime;
+
+    // 验证响应结构
+    if (!result || typeof result !== 'object') {
+      logger.warn(`get_local_item_list返回无效响应`, {
+        itemId,
+        responseType: typeof result,
+        elapsedMs: elapsed
+      });
+      return null;
+    }
+
+    if (!Array.isArray(result.item_list)) {
+      logger.warn(`get_local_item_list响应缺少item_list字段`, {
+        itemId,
+        responseKeys: Object.keys(result),
+        elapsedMs: elapsed
+      });
+      return null;
+    }
+
+    if (result.item_list.length === 0) {
+      logger.warn(`get_local_item_list返回空item_list`, {
+        itemId,
+        elapsedMs: elapsed
+      });
+      return null;
+    }
+
     // 从响应中提取 transcoded_video.origin.video_url
-    if (result?.item_list?.[0]?.video?.transcoded_video?.origin?.video_url) {
-      const originUrl = result.item_list[0].video.transcoded_video.origin.video_url;
-      logger.info(`成功获取原始视频URL: ${originUrl}`);
+    const firstItem = result.item_list[0];
+    if (firstItem?.video?.transcoded_video?.origin?.video_url) {
+      const originUrl = firstItem.video.transcoded_video.origin.video_url;
+
+      // 验证URL格式
+      try {
+        new URL(originUrl);
+      } catch (urlError) {
+        logger.error(`获取的origin URL格式无效`, {
+          itemId,
+          url: originUrl.substring(0, 100),
+          urlError: urlError.message,
+          elapsedMs: elapsed
+        });
+        return null;
+      }
+
+      logger.info(`成功获取原始视频URL`, {
+        itemId,
+        urlPrefix: originUrl.substring(0, 50) + '...',
+        elapsedMs: elapsed
+      });
       return originUrl;
     }
 
-    logger.warn(`未能从get_local_item_list响应中提取origin URL`);
+    // 记录响应结构用于调试
+    logger.warn(`未能从get_local_item_list响应中提取origin URL`, {
+      itemId,
+      hasVideo: !!firstItem?.video,
+      hasTranscodedVideo: !!firstItem?.video?.transcoded_video,
+      hasOrigin: !!firstItem?.video?.transcoded_video?.origin,
+      originKeys: firstItem?.video?.transcoded_video?.origin
+        ? Object.keys(firstItem.video.transcoded_video.origin)
+        : [],
+      elapsedMs: elapsed
+    });
     return null;
   } catch (error) {
-    logger.error(`调用get_local_item_list失败: ${error.message}`);
+    const elapsed = Date.now() - startTime;
+    const errorContext = {
+      itemId,
+      errorType: error.constructor.name,
+      errorMessage: error.message,
+      errorCode: error.code,
+      responseStatus: error.response?.status,
+      elapsedMs: elapsed
+    };
+
+    // 可预期的网络错误 - 使用降级策略
+    if (error.code === 'ECONNABORTED' ||
+        error.code === 'ETIMEDOUT' ||
+        error.message?.includes('timeout')) {
+      logger.warn(`获取原始视频URL超时，使用降级URL`, errorContext);
+      return null;
+    }
+
+    if (error.response?.status === 401 || error.response?.status === 403) {
+      logger.warn(`获取原始视频URL认证失败，使用降级URL`, errorContext);
+      return null;
+    }
+
+    if (error.response?.status >= 500) {
+      logger.warn(`获取原始视频URL服务端错误 ${error.response.status}，使用降级URL`, errorContext);
+      return null;
+    }
+
+    // 不可预期的错误 - 记录详细信息但不中断流程
+    logger.error(`获取原始视频URL遇到未预期错误`, {
+      ...errorContext,
+      errorStack: error.stack
+    });
+
+    // 由于这是可选增强功能，仍然使用降级策略
+    // 但详细记录错误以便后续调试
     return null;
   }
 }
