@@ -32,7 +32,7 @@ export const VERSION_CODE = "8.4.0";
 // 默认模型
 export const DEFAULT_IMAGE_MODEL = "jimeng-4.5";
 export const DEFAULT_IMAGE_MODEL_US = "jimeng-4.5";
-export const DEFAULT_VIDEO_MODEL = "jimeng-video-3.5-pro";
+export const DEFAULT_VIDEO_MODEL = "jimeng-video-seedance-2.0";
 
 // 草稿版本
 export const DRAFT_VERSION = "3.3.8";
@@ -63,6 +63,7 @@ export const IMAGE_MODEL_MAP_US = {
 
 // 视频模型映射 - 国内站 (CN)
 export const VIDEO_MODEL_MAP = {
+  "jimeng-video-seedance-2.0": "dreamina_seedance_40_pro",
   "jimeng-video-3.5-pro": "dreamina_ic_generate_video_model_vgfm_3.5_pro",
   "jimeng-video-3.0-pro": "dreamina_ic_generate_video_model_vgfm_3.0_pro",
   "jimeng-video-3.0": "dreamina_ic_generate_video_model_vgfm_3.0",
@@ -73,12 +74,14 @@ export const VIDEO_MODEL_MAP = {
 
 // 视频模型映射 - 美国站 (US) - 仅保留 3.0 和 3.5-pro
 export const VIDEO_MODEL_MAP_US = {
+  "jimeng-video-seedance-2.0": "dreamina_seedance_40_pro",
   "jimeng-video-3.5-pro": "dreamina_ic_generate_video_model_vgfm_3.5_pro",
   "jimeng-video-3.0": "dreamina_ic_generate_video_model_vgfm_3.0",
 };
 
 // 视频模型映射 - 亚洲国际站 (HK/JP/SG)
 export const VIDEO_MODEL_MAP_ASIA = {
+  "jimeng-video-seedance-2.0": "dreamina_seedance_40_pro",
   "jimeng-video-veo3": "dreamina_veo3_generate_video",
   "jimeng-video-veo3.1": "dreamina_veo3.1_generate_video",
   "jimeng-video-sora2": "dreamina_sora2_generate_video",

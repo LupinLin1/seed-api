@@ -29,6 +29,10 @@ export function getModel(model: string, regionInfo: RegionInfo) {
 }
 
 function getVideoBenefitType(model: string): string {
+  // Seedance 2.0 模型
+  if (model.includes("seedance_40")) {
+    return "dreamina_video_seedance_20_pro";
+  }
   // veo3.1 模型 (需先于 veo3 检查)
   if (model.includes("veo3.1")) {
     return "generate_video_veo3.1";
@@ -118,12 +122,14 @@ export async function generateVideo(
   const isVeo3 = model.includes("veo3");
   const isSora2 = model.includes("sora2");
   const is35Pro = model.includes("3.5_pro");
-  // 只有 video-3.0 和 video-3.0-fast 支持 resolution 参数（3.0-pro 和 3.5-pro 不支持）
+  const isSeedance20 = model.includes("seedance_40");
+  // 只有 video-3.0 和 video-3.0-fast 支持 resolution 参数（3.0-pro、3.5-pro 和 seedance-2.0 不支持）
   const supportsResolution = (model.includes("vgfm_3.0") || model.includes("vgfm_3.0_fast")) && !model.includes("_pro");
 
   // 将秒转换为毫秒
   // veo3 模型固定 8 秒
   // sora2 模型支持 4秒、8秒、12秒，默认4秒
+  // seedance-2.0 模型支持 4-15秒，默认5秒
   // 3.5-pro 模型支持 5秒、10秒、12秒，默认5秒
   // 其他模型支持 5秒、10秒，默认5秒
   let durationMs: number;
@@ -141,6 +147,15 @@ export async function generateVideo(
     } else {
       durationMs = 4000;
       actualDuration = 4;
+    }
+  } else if (isSeedance20) {
+    // Seedance 2.0 支持 4-15秒 (fps=24, frames=96-360)
+    if (duration >= 4 && duration <= 15) {
+      durationMs = duration * 1000;
+      actualDuration = duration;
+    } else {
+      durationMs = 5000;
+      actualDuration = 5;
     }
   } else if (is35Pro) {
     if (duration === 12) {
